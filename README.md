@@ -1,105 +1,909 @@
-# Plant Disease Detection with Transfer Learning
+# 🌿 Plant Disease Detection with Transfer Learning
 
-### Tomato Leaves
+> Image classification of tomato leaf diseases using pretrained CNN models and Transfer Learning.
 
-## The Case
+**Members:** Spirit · Emmy · Mahtab
 
-Plant diseases can affect crop quality, reduce yields, and lead to economic losses for growers. Detecting signs of disease early can help farmers take action before the problem spreads.
+---
 
-However, identifying plant diseases often requires knowledge and manual inspection. Our case explores whether image classification could be used as a first step toward making this process faster and more accessible for tomato growers.
+## 📌 Project Overview
 
-### The Idea
+The goal of this project is to investigate how **Transfer Learning** can be used to classify diseases in tomato leaves.
 
-Imagine a tool where a tomato grower takes a photo of a leaf and receives an indication of whether the leaf appears:
+Given an image of a tomato leaf, the model predicts one of three classes:
 
-- **Healthy**
-- Affected by **Early Blight**
-- Affected by **Late Blight**
+- 🍃 **Healthy**
+- 🟤 **Early Blight**
+- 🍂 **Late Blight**
 
-Instead of developing an image recognition model completely from scratch, we explore **transfer learning** — using a model that has already learned to recognize visual patterns from a large image dataset and adapting that knowledge to tomato disease classification.
+Instead of training a deep neural network completely from scratch, we use models that have already learned general visual features from **ImageNet** and adapt them to our tomato leaf classification problem.
 
-## Business Value
+---
 
-A system like this could potentially help agricultural businesses:
+## 🎯 Problem
 
-- Detect possible tomato diseases earlier
-- Reduce time spent on manual inspection
-- Support growers in identifying plants that may require further attention
-- Reduce crop losses through earlier intervention
-- Make basic plant health screening more accessible
+Plant diseases can affect crop quality and production.
 
-The model should not be considered a replacement for expert assessment. Instead, it could act as an early screening and decision-support tool.
+The task in this project is a **multiclass image classification problem**:
 
-## Project Goal
+> Can a pretrained CNN model distinguish between Healthy tomato leaves, Early Blight and Late Blight?
 
-The goal of this project is to investigate whether transfer learning can be used to distinguish between healthy tomato leaves and leaves affected by Early Blight or Late Blight.
+The project investigates several parts of a complete machine learning workflow:
 
-We will:
+- Data inspection
+- Data cleaning
+- Duplicate and leakage checks
+- Train / validation / test splitting
+- Data augmentation
+- Frozen feature extraction
+- Fine-tuning
+- Model comparison
+- Confusion matrices
+- F1-score evaluation
+- Confidence analysis
+- Error analysis
+- Generalization on unseen test data
 
-- Explore and understand the PlantVillage dataset
-- Investigate the distribution of image classes
-- Select suitable classes for the classification task
-- Apply transfer learning using a pre-trained image classification model
-- Train and evaluate the model
-- Analyze the results, limitations, and potential business value
+---
 
-## Dataset
+## 📊 Dataset
 
-We use the **PlantVillage** dataset from Kaggle, which contains images of healthy and diseased plant leaves across several plant species and disease categories.
+We use the **PlantVillage** dataset from Kaggle.
 
-After exploring the dataset, we selected three classes from the same plant species:
+The complete PlantVillage dataset contains approximately **54,000 images** from several plant species and plant diseases.
 
-| Class | Training Images | Validation Images |
-|---|---:|---:|
-| Tomato - Healthy | 1,273 | 318 |
-| Tomato - Early Blight | 800 | 200 |
-| Tomato - Late Blight | 1,527 | 382 |
+For this project, we selected only three tomato classes.
 
-The classes are not perfectly balanced, but all contain enough images for a small transfer learning experiment.
+### Selected Classes
 
-Using classes from the same plant species also creates a more meaningful classification problem. The model must learn disease-related visual patterns rather than simply learning to distinguish between different types of plants.
+| Class | Description |
+|---|---|
+| Tomato Healthy | Healthy tomato leaves |
+| Tomato Early Blight | Tomato leaves affected by Early Blight |
+| Tomato Late Blight | Tomato leaves affected by Late Blight |
 
-### Initial Visual Observations
+For our selected classes, we started with:
 
-An initial exploration of the images showed visible differences between the three classes:
+**4,500 tomato leaf images**
 
-- **Healthy leaves** appear mostly green with a relatively even color.
-- **Early Blight** examples show smaller brown or dark spots while much of the leaf remains green.
-- **Late Blight** examples show larger damaged or brown areas, with some leaves appearing more severely affected.
+After data cleaning:
 
-These observations suggest that features such as **color, texture, and patterns of leaf damage** may be useful for classification.
+**4,486 images remained**
 
-All images in the selected classes have a resolution of **256 × 256 pixels**.
+---
 
-## Dataset Setup
+## 🖼️ Initial Data Exploration
 
-Each team member downloads the PlantVillage dataset locally. The image data is not included in this repository.
+Before training any models, the dataset was inspected to understand the problem and the visual differences between the classes.
 
-After downloading and extracting the dataset, place it inside:
+Sample images showed that:
 
-`data/raw/`
+- Healthy leaves were often visually easier to distinguish
+- Early Blight contained visible spots and damaged areas
+- Late Blight also contained discoloration and damaged areas
+- Early Blight and Late Blight sometimes had similar visual characteristics
 
-Expected structure:
+This later became important during the error analysis, because most classification errors occurred between **Early Blight and Late Blight**.
 
-    data/
-    └── raw/
-        └── plantvillage/
-            └── PlantVillage/
-                ├── train/
-                └── val/
+---
 
-## From Image to Insight
+## 🧹 Data Cleaning
 
-**Tomato leaf image → Pre-trained model → Transfer learning → Disease classification → Decision support**
+Before model training, the image data was checked carefully.
 
-The technical goal is to understand how transfer learning can reuse knowledge from an existing image model for a new classification problem.
+The analysis included:
 
-The broader goal is to explore how this approach could form the foundation of a practical tool that helps growers identify potential plant health problems earlier.
+- Checking folder structure
+- Inspecting image files
+- Checking class distributions
+- Checking duplicate images
+- Checking possible data leakage
+- Identifying problematic samples
+- Removing problematic images
 
-## Limitations
+### Before and After Cleaning
 
-The PlantVillage images are captured under relatively controlled conditions with similar backgrounds and image quality.
+**Before cleaning:** 4,500 images  
+**After cleaning:** 4,486 images
 
-Real-world images taken by growers could contain different lighting conditions, backgrounds, angles, and image quality. Therefore, good performance on this dataset would not necessarily mean that the model is ready for real-world agricultural use.
+Only a small number of images were removed.
 
-This project should be considered a **proof of concept** rather than a production-ready disease detection system.
+The overall class distribution therefore remained almost unchanged after cleaning.
+
+---
+
+## ✂️ Train / Validation / Test Split
+
+After cleaning, the remaining **4,486 images** were divided into three separate datasets.
+
+| Dataset | Number of Images | Purpose |
+|---|---:|---|
+| Training | 2,872 | Used to train the models |
+| Validation | 719 | Used to compare and tune models |
+| Test | 895 | Used only for final evaluation |
+| **Total** | **4,486** | |
+
+The **test set was kept separate until the final model had been selected**.
+
+This is important because the validation set can be used during model development, while the test set should provide a final evaluation on data that has not influenced model selection.
+
+---
+
+## 🔄 Data Augmentation
+
+Data augmentation was applied only to the **training data**.
+
+The augmentation pipeline introduced small random transformations such as:
+
+- Rotation
+- Zoom
+- Position changes
+- Orientation changes
+
+The purpose was to create more variation during training.
+
+Instead of memorizing exact training images, the model is encouraged to learn more general visual patterns related to the plant diseases.
+
+Data augmentation can also help reduce the risk of **overfitting** and improve generalization.
+
+---
+
+## 🧠 Transfer Learning
+
+Transfer Learning allows knowledge from an already trained model to be reused for a new problem.
+
+Instead of training a large CNN completely from scratch, we used models that had already been pretrained on **ImageNet**.
+
+These pretrained models have already learned useful visual features such as:
+
+- Edges
+- Shapes
+- Colors
+- Textures
+- Visual patterns
+
+We then adapted these pretrained representations to our specific tomato disease classification task.
+
+---
+
+## 🔗 Transfer Learning Workflow
+
+Our general Transfer Learning strategy was:
+
+```text
+Pretrained ImageNet Model
+          ↓
+Frozen Feature Extraction
+          ↓
+New Classification Head
+          ↓
+Healthy / Early Blight / Late Blight
+          ↓
+Fine-Tuning
+          ↓
+Model Evaluation
+```
+
+The original ImageNet classifier was not used for our final predictions.
+
+Instead, a new classification head was added for our **three tomato classes**.
+
+---
+
+## 🧊 Frozen Feature Extraction
+
+The first Transfer Learning strategy was **Frozen Feature Extraction**.
+
+The pretrained base model was kept frozen.
+
+This means that the pretrained weights inside the base model were not updated during this stage.
+
+Only the newly added classification layers were trained for the tomato dataset.
+
+Conceptually:
+
+```text
+Pretrained CNN
+      ↓
+Frozen Base Model
+      ↓
+New Classification Layers
+      ↓
+3 Tomato Classes
+```
+
+This allows us to benefit from previously learned visual representations without retraining the whole network.
+
+---
+
+## 🔧 Fine-Tuning
+
+After training the frozen models, we also performed **controlled fine-tuning**.
+
+During fine-tuning:
+
+- Parts of the pretrained model were unfrozen
+- Later layers were allowed to adapt to tomato leaf images
+- A lower learning rate was used
+- Earlier general visual features were preserved
+
+The idea is that earlier CNN layers often learn general features such as edges and shapes, while later layers can become more specialized for the new classification task.
+
+---
+
+## 🤖 Models Evaluated
+
+Two pretrained CNN architectures were evaluated in the main analysis:
+
+### ResNet50V2
+
+Experiments:
+
+- **ResNet50V2 Frozen**
+- **ResNet50V2 Fine-Tuned**
+
+### EfficientNetB0
+
+Experiments:
+
+- **EfficientNetB0 Frozen**
+- **EfficientNetB0 Fine-Tuned**
+
+This resulted in four main model experiments.
+
+---
+
+## 📈 ResNet50V2 – Frozen
+
+The first main experiment used **ResNet50V2** as a frozen feature extractor.
+
+The model was:
+
+- Pretrained on ImageNet
+- Used without the original ImageNet classifier
+- Kept frozen during the first training stage
+- Extended with new classification layers for our three classes
+
+### Validation Result
+
+**Validation Accuracy: 95.6%**
+
+This already provided a strong baseline.
+
+---
+
+## 🔧 ResNet50V2 – Fine-Tuning
+
+The next experiment used controlled fine-tuning.
+
+Fine-tuning improved ResNet50V2 across all main evaluation metrics.
+
+### Frozen vs Fine-Tuned
+
+- **Validation Accuracy**
+  - Frozen: 95.6%
+  - Fine-Tuned: **96.8%**
+
+- **Macro F1**
+  - Frozen: 95.0%
+  - Fine-Tuned: **96.4%**
+
+- **Weighted F1**
+  - Frozen: 95.5%
+  - Fine-Tuned: **96.8%**
+
+Fine-tuning therefore improved all three main metrics for ResNet50V2.
+
+---
+
+## ⚡ EfficientNetB0
+
+We also evaluated **EfficientNetB0** as a second pretrained CNN architecture.
+
+The same overall Transfer Learning strategy was used:
+
+1. Frozen feature extraction
+2. Controlled fine-tuning
+3. Validation evaluation
+
+### Results
+
+**EfficientNetB0 Frozen**
+
+Validation Accuracy: **96.1%**
+
+**EfficientNetB0 Fine-Tuned**
+
+Validation Accuracy: **97.5%**
+
+Fine-tuning therefore also improved EfficientNetB0.
+
+---
+
+## 🏆 Model Comparison
+
+The four main experiments were compared using:
+
+- Validation Accuracy
+- Macro F1-score
+- Weighted F1-score
+
+### Validation Results
+
+| Model | Validation Accuracy | Macro F1 | Weighted F1 |
+|---|---:|---:|---:|
+| ResNet50V2 Frozen | 95.6% | 95.0% | 95.5% |
+| EfficientNetB0 Frozen | 96.1% | 95.6% | 96.1% |
+| ResNet50V2 Fine-Tuned | 96.8% | 96.4% | 96.8% |
+| **EfficientNetB0 Fine-Tuned** | **97.5%** | **97.1%** | **97.5%** |
+
+### Best Model
+
+🏆 **EfficientNetB0 Fine-Tuned**
+
+It achieved the strongest overall validation performance.
+
+The model was selected based on validation results **before the final test set was evaluated**.
+
+---
+
+## 🧪 Final Test Evaluation
+
+After selecting the best model, **EfficientNetB0 Fine-Tuned** was evaluated on the separate test dataset.
+
+### Final Result
+
+- Test images: **895**
+- Correct predictions: **866**
+- Incorrect predictions: **29**
+- **Test Accuracy: 96.76%**
+
+The test accuracy remained close to the validation accuracy.
+
+This is a positive indication that the model generalizes well to unseen data.
+
+---
+
+## 🔍 Final Confusion Matrix
+
+The final test confusion matrix showed the following results.
+
+### Early Blight
+
+- Correctly classified: **188**
+- Predicted as Late Blight: **7**
+- Predicted as Healthy: **5**
+
+### Late Blight
+
+- Correctly classified: **362**
+- Predicted as Early Blight: **13**
+- Predicted as Healthy: **4**
+
+### Healthy
+
+- Correctly classified: **316**
+- Predicted as Early Blight: **0**
+- Predicted as Late Blight: **0**
+
+The Healthy class was therefore classified perfectly in the final test set:
+
+**316 / 316 Healthy images correctly classified**
+
+Most remaining errors occurred between:
+
+**Early Blight ↔ Late Blight**
+
+---
+
+## ⚠️ Error Analysis
+
+Accuracy alone does not explain how or why a model fails.
+
+Therefore, we also performed **error analysis** on the misclassified test images.
+
+The final model made:
+
+**29 incorrect predictions out of 895 test images**
+
+Most errors involved confusion between Early Blight and Late Blight.
+
+This was consistent with our visual exploration of the dataset.
+
+Both diseases can contain similar visual features such as:
+
+- Brown lesions
+- Damaged leaf areas
+- Discoloration
+- Similar texture patterns
+
+---
+
+## 🎯 Confidence Analysis
+
+We also examined the model's **confidence** for incorrect predictions.
+
+For a three-class classification problem, the model produces scores for:
+
+- Healthy
+- Early Blight
+- Late Blight
+
+The class with the highest output score becomes the final prediction.
+
+For example:
+
+```text
+Early Blight: 50%
+Late Blight: 48%
+Healthy:      2%
+```
+
+The model predicts **Early Blight**, but the scores show that it is uncertain between Early Blight and Late Blight.
+
+A high-confidence prediction could instead look like:
+
+```text
+Early Blight: 98%
+Late Blight:   1%
+Healthy:       1%
+```
+
+However, an important observation from our error analysis was that:
+
+> **High confidence does not automatically mean that the prediction is correct.**
+
+Some misclassified images had high confidence values.
+
+Confidence therefore describes how strongly the model prefers one class compared with the alternatives, but it does not guarantee that the prediction is correct.
+
+---
+
+## 📐 Evaluation Metrics
+
+Several evaluation metrics were used instead of relying only on accuracy.
+
+### Accuracy
+
+Accuracy measures the proportion of all predictions that were correct.
+
+```text
+Correct Predictions
+-------------------
+Total Predictions
+```
+
+---
+
+### Precision
+
+Precision answers:
+
+> When the model predicts a specific class, how often is it correct?
+
+High precision means that the model makes relatively few false positive predictions for that class.
+
+---
+
+### Recall
+
+Recall answers:
+
+> Of all real examples belonging to a class, how many did the model successfully identify?
+
+High recall means that the model misses relatively few examples of that class.
+
+---
+
+### F1-Score
+
+F1-score combines **precision and recall** into one metric.
+
+This is useful when we want to evaluate both false positives and false negatives.
+
+---
+
+### Macro F1
+
+Macro F1 calculates an F1-score for each class and then gives every class equal importance.
+
+Conceptually:
+
+```text
+F1 Healthy
++
+F1 Early Blight
++
+F1 Late Blight
+----------------
+       3
+```
+
+This is useful when we want smaller and larger classes to contribute equally to the final metric.
+
+---
+
+### Weighted F1
+
+Weighted F1 also calculates F1 separately for every class.
+
+However, the final value is weighted according to how many samples each class contains.
+
+A larger class therefore contributes more to the final Weighted F1-score than a smaller class.
+
+This is useful because our classes are not perfectly balanced.
+
+---
+
+## ⚖️ Class Imbalance
+
+The three tomato classes do not contain exactly the same number of images.
+
+For example, after the final split, the training data contained:
+
+- Healthy: **1,015 images**
+- Early Blight: **640 images**
+- Late Blight: **1,217 images**
+
+Early Blight therefore had fewer training examples than the other two classes.
+
+Class imbalance is important because models can otherwise become more influenced by larger classes.
+
+---
+
+## ⚖️ Class Weights vs Weighted F1
+
+These two concepts are related to class imbalance but are used differently.
+
+### Class Weights
+
+Class weights can be used **during training**.
+
+Smaller classes can receive a larger weight so that mistakes on those classes have more impact on the training loss.
+
+### Weighted F1
+
+Weighted F1 is used **during evaluation**.
+
+It summarizes class-specific F1-scores while taking the number of examples in each class into account.
+
+In short:
+
+```text
+Class Weights
+→ Training
+
+Weighted F1
+→ Evaluation
+```
+
+---
+
+## 🌱 Practical Value
+
+A model like this could potentially be used as a support tool for agriculture.
+
+Possible applications include:
+
+- Fast screening of tomato leaves
+- Supporting farmers and growers
+- Earlier identification of possible plant diseases
+- Supporting manual inspection
+- Agricultural decision support
+
+A future application could allow a user to take a photograph of a tomato leaf and receive an initial classification.
+
+For example:
+
+```text
+User takes a photo
+        ↓
+Model analyzes the leaf
+        ↓
+Prediction
+        ↓
+Healthy
+or
+Early Blight
+or
+Late Blight
+```
+
+The model should be considered a **decision-support tool** rather than a replacement for agricultural experts.
+
+---
+
+## ⚠️ Limitations
+
+Although the results are strong, the project has several important limitations.
+
+### Controlled Dataset
+
+PlantVillage contains relatively clean and controlled images.
+
+Real-world agricultural images may contain:
+
+- Complex backgrounds
+- Different lighting conditions
+- Shadows
+- Different camera angles
+- Multiple leaves
+- Other plants
+- Occlusion
+- Different image quality
+
+The strong performance on PlantVillage therefore does not automatically guarantee the same performance in real agricultural environments.
+
+---
+
+### Limited Number of Classes
+
+The project only includes three tomato classes:
+
+- Healthy
+- Early Blight
+- Late Blight
+
+A complete plant disease detection system would need to support more diseases and potentially additional plant species.
+
+---
+
+### Real-World Testing
+
+The model should be tested on images collected directly from real farms or growing environments before being considered for practical deployment.
+
+---
+
+## 🔮 Future Work
+
+Possible future improvements include:
+
+- Testing the model on real-world field images
+- Adding more tomato disease classes
+- Adding other plant species
+- Further hyperparameter tuning
+- Confidence calibration
+- Explainability methods such as Grad-CAM
+- Comparing additional pretrained CNN architectures
+- Building a web application
+- Building a mobile application
+- Testing the model in real agricultural environments
+
+---
+
+## 📁 Project Structure
+
+```text
+plant-disease-detection/
+│
+├── data/
+│   └── raw/
+│       └── plantvillage/
+│           └── PlantVillage/
+│
+├── notebooks/
+│   ├── emmy_analysis.ipynb
+│   ├── spirit_analysis.ipynb
+│   └── mahtab_analysis.ipynb
+│
+├── reports/
+│   └── figures/
+│       ├── emmy/
+│       ├── spirit/
+│       └── mahtab/
+│
+├── .gitignore
+├── README.md
+└── requirements.txt
+```
+
+---
+
+## 📦 Dataset Setup
+
+The PlantVillage dataset is **not stored in the GitHub repository**.
+
+The `data/raw/` directory is gitignored because the dataset contains many image files and is too large to include directly in the repository.
+
+Download the PlantVillage dataset from Kaggle and extract it so that the final local path becomes:
+
+```text
+data/raw/plantvillage/PlantVillage/
+```
+
+The `.gitkeep` file inside `data/raw/` is only used so that Git keeps the empty directory structure.
+
+---
+
+## ⚙️ Local Setup
+
+Clone the repository:
+
+```bash
+git clone https://github.com/emmykristina/plant-disease-detection.git
+cd plant-disease-detection
+```
+
+The shared development branch is:
+
+```bash
+git checkout dev
+git pull origin dev
+```
+
+Create your own feature branch before starting new work:
+
+```bash
+git checkout -b feat/name-analysis
+```
+
+---
+
+## 🐍 Virtual Environment
+
+Create a local virtual environment:
+
+```bash
+python3 -m venv .venv
+```
+
+### Activate on Windows Git Bash
+
+```bash
+source .venv/Scripts/activate
+```
+
+Install project dependencies:
+
+```bash
+python3 -m pip install -r requirements.txt
+```
+
+The `.venv` directory should remain local and should not be pushed to GitHub.
+
+---
+
+## 📓 Notebooks
+
+Each team member works in a separate notebook:
+
+```text
+notebooks/
+├── emmy_analysis.ipynb
+├── spirit_analysis.ipynb
+└── mahtab_analysis.ipynb
+```
+
+This allows each analysis to be developed independently before the final results are compared.
+
+---
+
+## 📊 Figures
+
+Generated figures are organized by team member:
+
+```text
+reports/
+└── figures/
+    ├── emmy/
+    ├── spirit/
+    └── mahtab/
+```
+
+Examples of generated analyses include:
+
+- Sample class images
+- Class distributions
+- Cleaning comparisons
+- Train / validation / test distributions
+- Data augmentation examples
+- Training history
+- Validation metrics
+- Model comparisons
+- Confusion matrices
+- Final test results
+- Misclassified image analysis
+
+---
+
+## 🌿 Final Conclusion
+
+This project demonstrates how **Transfer Learning can be used effectively for tomato leaf disease classification**.
+
+We started with a subset of **4,500 PlantVillage images** from three tomato classes.
+
+After data cleaning, **4,486 images** remained.
+
+The dataset was then divided into:
+
+- **2,872 training images**
+- **719 validation images**
+- **895 test images**
+
+We evaluated two pretrained CNN architectures:
+
+- ResNet50V2
+- EfficientNetB0
+
+Both architectures were tested using:
+
+- Frozen feature extraction
+- Controlled fine-tuning
+
+Fine-tuning improved the performance of both models.
+
+The strongest validation result was achieved by:
+
+## 🏆 EfficientNetB0 Fine-Tuned
+
+**Validation Accuracy: 97.5%**
+
+The selected model was then evaluated on the completely separate test set.
+
+### Final Test Performance
+
+**Test Accuracy: 96.76%**
+
+**866 of 895 test images were classified correctly.**
+
+The model performed especially well on Healthy leaves, with:
+
+**316 / 316 Healthy test images classified correctly.**
+
+The main remaining challenge was distinguishing between:
+
+**Early Blight ↔ Late Blight**
+
+The error analysis also demonstrated that a model can sometimes make incorrect predictions with high confidence.
+
+Therefore, the project shows the importance of evaluating machine learning models using more than one metric and performing detailed error analysis.
+
+---
+
+## 🔄 Complete ML Workflow
+
+```text
+PlantVillage Dataset
+        ↓
+Select 3 Tomato Classes
+        ↓
+Data Inspection
+        ↓
+Duplicate & Leakage Checks
+        ↓
+Data Cleaning
+        ↓
+Train / Validation / Test Split
+        ↓
+Data Augmentation
+        ↓
+Transfer Learning
+        ↓
+Frozen Feature Extraction
+        ↓
+Fine-Tuning
+        ↓
+Model Comparison
+        ↓
+Best Model Selection
+        ↓
+Final Test Evaluation
+        ↓
+Confusion Matrix
+        ↓
+Confidence & Error Analysis
+        ↓
+Practical Evaluation
+```
+
+---
+
+## 👥 Team
+
+- **Spirit**
+- **Emmy**
+- **Mahtab**
+
+---
+
+**Healthy plants, better future. 🌿**
